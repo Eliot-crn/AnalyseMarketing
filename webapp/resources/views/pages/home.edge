@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prospects audiovisuel - base SIRENE</title>
+@vite(['resources/css/app.css', 'resources/js/app.ts'])
+</head>
+<body>
+<header>
+  <h1>Prospects audiovisuel</h1>
+  <div class="sub" id="src">Entreprises actives et diffusibles de la base SIRENE (INSEE), notées selon leur besoin probable en vidéo, photo et identité graphique.</div>
+</header>
+<main>
+<section>
+  <h2>1. Territoire</h2>
+  <div class="row">
+    <label style="flex:1 1 220px">Région
+      <select id="region"><option value="">Toutes les régions</option></select></label>
+    <button id="checkAll" type="button">Cocher la liste affichée</button>
+    <button id="uncheck" type="button">Tout décocher</button>
+    <button id="load" type="button" class="primary">Charger la sélection</button>
+  </div>
+  <div class="deps" id="deps"></div>
+  <div id="status" role="status">Cochez un ou plusieurs départements puis « Charger la sélection ».</div>
+</section>
+
+<section>
+  <h2>2. Filtres</h2>
+  <div class="grid" id="filters">
+    <label>Recherche par nom / enseigne<input id="f_q" type="search" placeholder="ex. boulangerie"></label>
+    <label>Secteur cible<select id="f_cat"><option value="-1">Tous</option></select></label>
+    <label>NAF (code ou mot du libellé)<input id="f_naf" placeholder="ex. 56.10 ou hôtel"></label>
+    <label>Score secteur minimum : <output id="f_score_o">0</output><input id="f_score" type="range" min="0" max="100" step="5" value="0"></label>
+    <label>Score opportunité minimum : <output id="f_opp_o">0</output><input id="f_opp" type="range" min="0" max="100" step="5" value="0"></label>
+    <label>Communication / présence web<select id="f_web"><option value="">Indifférent</option><option value="low">Peu de communication (pas de site connu, ou site sans vidéo et 1 réseau au plus)</option><option value="none">Aucune présence web connue</option><option value="site">Site web connu</option><option value="ana">Site analysé</option></select></label>
+    <label>Vidéo sur le site<select id="f_video"><option value="">Indifférent</option><option value="non">Non (site analysé)</option><option value="oui">Oui</option><option value="inc">Inconnu (site non analysé)</option></select></label>
+    <label>Code postal (préfixes, séparés par ,)<input id="f_cp" inputmode="numeric" placeholder="ex. 75011, 692"></label>
+    <label>Commune contient<input id="f_com" placeholder="ex. LYON"></label>
+    <label>Effectif minimum<select id="f_trmin"></select></label>
+    <label>Effectif maximum<select id="f_trmax"></select></label>
+    <label>Catégorie d'entreprise<select id="f_catent"><option value="-1">Toutes</option></select></label>
+    <label>Type<select id="f_type"><option value="">Tous</option><option value="soc">Sociétés / personnes morales</option><option value="ei">Entrepreneurs individuels</option></select></label>
+    <label>Employeur<select id="f_emp"><option value="-1">Indifférent</option><option value="1">Oui</option><option value="0">Non</option></select></label>
+    <label>Économie sociale et solidaire<select id="f_ess"><option value="-1">Indifférent</option><option value="1">Oui</option><option value="0">Non</option></select></label>
+    <label>Créée à partir du<input id="f_dfrom" type="date"></label>
+    <label>Créée jusqu'au<input id="f_dto" type="date"></label>
+  </div>
+  <div class="row" style="margin-top:8px">
+    <span class="sub">Création :</span>
+    <button type="button" data-y="1">&lt; 1 an</button>
+    <button type="button" data-y="2">&lt; 2 ans</button>
+    <button type="button" data-y="5">&lt; 5 ans</button>
+    <button type="button" id="reset">Réinitialiser les filtres</button>
+  </div>
+</section>
+
+<section>
+  <h2>3. Tableau de bord de la sélection</h2>
+  <div class="kpis" id="kpis"></div>
+  <div class="charts">
+    <div><h2>Secteurs cibles</h2><div id="c_cat"></div></div>
+    <div><h2>Effectif</h2><div id="c_tr"></div></div>
+    <div><h2>Ancienneté</h2><div id="c_age"></div></div>
+  </div>
+</section>
+
+<section>
+  <div class="row" style="justify-content:space-between;margin-bottom:8px">
+    <h2 style="margin:0" id="count">0 résultat</h2>
+    <button id="export" type="button" disabled>Exporter la sélection en CSV</button>
+  </div>
+  <div class="tw"><table>
+    <thead><tr id="thead"></tr></thead>
+    <tbody id="tbody"><tr><td colspan="13" class="sub">Aucune donnée chargée.</td></tr></tbody>
+  </table></div>
+  <div class="row pager">
+    <div class="row"><button id="prev" type="button">Précédent</button><span id="page" class="sub"></span><button id="next" type="button">Suivant</button></div>
+    <label class="row">Lignes par page <select id="psize"><option>50</option><option selected>100</option><option>250</option></select></label>
+  </div>
+  <p class="sub"><b>Présence web</b> : sites et réseaux issus d'OpenStreetMap (© contributeurs OpenStreetMap, licence ODbL), couverture très partielle. « Aucune présence web connue » signifie seulement qu'aucun lien n'a été trouvé dans cette source : cela ne prouve pas que l'entreprise n'a pas de site. Les rapprochements par nom seul sont marqués « à vérifier ». Vidéo, année de copyright et compatibilité mobile ne sont renseignées que pour les sites dont la page d'accueil a été analysée (échantillon pilote). Score opportunité = 0,4 x score secteur + déficit de communication (max 40) + budget plausible (max 12) + ancienneté (max 8) ; détail dans ANALYSE.md.</p>
+  <p class="sub">Les entrepreneurs individuels (étiquette EI) sont des personnes physiques : leurs nom et prénom sont des données personnelles (voir ANALYSE.md, note RGPD). Le lien « fiche » ouvre l'Annuaire des entreprises (data.gouv.fr) ; aucune requête n'est faite sans clic.</p>
+</section>
+</main>
+
+</body>
+</html>
