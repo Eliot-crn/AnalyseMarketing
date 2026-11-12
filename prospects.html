@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prospects audiovisuel - base SIRENE</title>
+<style>
+:root{--bg:#0f1216;--panel:#181c22;--panel2:#20252d;--line:#2c333d;--txt:#e6e9ee;--mut:#98a2b0;--acc:#4da3ff;--good:#3ecf8e;--warn:#f0b445}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{padding:16px 16px 4px}
+h1{margin:0;font-size:20px}
+h2{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);font-weight:600}
+.sub{color:var(--mut);font-size:12px}
+main{padding:8px 16px 40px;display:grid;gap:12px}
+section{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px}
+label{display:block;font-size:12px;color:var(--mut)}
+input,select,button{font:inherit;color:var(--txt);background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:6px 8px;min-height:34px}
+input,select{width:100%}
+input:focus-visible,select:focus-visible,button:focus-visible,a:focus-visible,th:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+button{cursor:pointer}
+button:hover{border-color:var(--acc)}
+button.primary{background:var(--acc);border-color:var(--acc);color:#06121f;font-weight:600}
+button:disabled{opacity:.45;cursor:default}
+.grid{display:grid;gap:8px 10px;grid-template-columns:repeat(auto-fill,minmax(170px,1fr))}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.deps{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:2px 10px;max-height:190px;overflow:auto;margin:8px 0;padding:6px;background:var(--panel2);border-radius:6px}
+.deps label{color:var(--txt);font-size:13px;display:flex;gap:6px;align-items:center;white-space:nowrap}
+.deps input{width:auto;min-height:0}
+.deps small{color:var(--mut)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:12px}
+.kpi{background:var(--panel2);border-radius:8px;padding:8px 10px}
+.kpi b{display:block;font-size:20px;font-variant-numeric:tabular-nums}
+.kpi span{color:var(--mut);font-size:12px}
+.charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.bar{display:grid;grid-template-columns:minmax(90px,45%) 1fr 62px;gap:6px;align-items:center;font-size:12px;margin:2px 0}
+.bar div{height:10px;background:var(--panel2);border-radius:3px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--acc);border-radius:3px}
+.bar span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar span:last-child{text-align:right;color:var(--mut);font-variant-numeric:tabular-nums}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;min-width:1100px;font-size:13px}
+th,td{padding:6px 8px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{position:sticky;top:0;background:var(--panel2);cursor:pointer;user-select:none;white-space:nowrap;font-size:12px;color:var(--mut)}
+th[aria-sort]{color:var(--txt)}
+tr:hover td{background:#1c2129}
+td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+td small{color:var(--mut);display:block}
+a{color:var(--acc)}
+.tag{display:inline-block;font-size:10px;padding:0 5px;border-radius:8px;border:1px solid var(--line);color:var(--mut);margin-left:4px;vertical-align:1px}
+.sc{display:inline-block;min-width:30px;text-align:center;border-radius:5px;padding:1px 4px;font-weight:600;background:var(--panel2)}
+.sc.h{background:#14432f;color:var(--good)}.sc.m{background:#4a3a12;color:var(--warn)}
+#status{color:var(--mut);font-size:12px}
+#status.err{color:#ff7b7b}
+.pager{justify-content:space-between;margin-top:8px}
+.pager select{width:auto}
+</style>
+</head>
+<body>
+<header>
+  <h1>Prospects audiovisuel</h1>
+  <div class="sub" id="src">Entreprises actives et diffusibles de la base SIRENE (INSEE), notées selon leur besoin probable en vidéo, photo et identité graphique.</div>
+</header>
+<main>
+<section>
+  <h2>1. Territoire</h2>
+  <div class="row">
+    <label style="flex:1 1 220px">Région
+      <select id="region"><option value="">Toutes les régions</option></select></label>
+    <button id="checkAll" type="button">Cocher la liste affichée</button>
+    <button id="uncheck" type="button">Tout décocher</button>
+    <button id="load" type="button" class="primary">Charger la sélection</button>
+  </div>
+  <div class="deps" id="deps"></div>
+  <div id="status" role="status">Cochez un ou plusieurs départements puis « Charger la sélection ».</div>
+</section>
+
+<section>
+  <h2>2. Filtres</h2>
+  <div class="grid" id="filters">
+    <label>Recherche par nom / enseigne<input id="f_q" type="search" placeholder="ex. boulangerie"></label>
+    <label>Secteur cible<select id="f_cat"><option value="-1">Tous</option></select></label>
+    <label>NAF (code ou mot du libellé)<input id="f_naf" placeholder="ex. 56.10 ou hôtel"></label>
+    <label>Score secteur minimum : <output id="f_score_o">0</output><input id="f_score" type="range" min="0" max="100" step="5" value="0"></label>
+    <label>Score opportunité minimum : <output id="f_opp_o">0</output><input id="f_opp" type="range" min="0" max="100" step="5" value="0"></label>
+    <label>Communication / présence web<select id="f_web"><option value="">Indifférent</option><option value="low">Peu de communication (pas de site connu, ou site sans vidéo et 1 réseau au plus)</option><option value="none">Aucune présence web connue</option><option value="site">Site web connu</option><option value="ana">Site analysé</option></select></label>
+    <label>Vidéo sur le site<select id="f_video"><option value="">Indifférent</option><option value="non">Non (site analysé)</option><option value="oui">Oui</option><option value="inc">Inconnu (site non analysé)</option></select></label>
+    <label>Code postal (préfixes, séparés par ,)<input id="f_cp" inputmode="numeric" placeholder="ex. 75011, 692"></label>
+    <label>Commune contient<input id="f_com" placeholder="ex. LYON"></label>
+    <label>Effectif minimum<select id="f_trmin"></select></label>
+    <label>Effectif maximum<select id="f_trmax"></select></label>
+    <label>Catégorie d'entreprise<select id="f_catent"><option value="-1">Toutes</option></select></label>
+    <label>Type<select id="f_type"><option value="">Tous</option><option value="soc">Sociétés / personnes morales</option><option value="ei">Entrepreneurs individuels</option></select></label>
+    <label>Employeur<select id="f_emp"><option value="-1">Indifférent</option><option value="1">Oui</option><option value="0">Non</option></select></label>
+    <label>Économie sociale et solidaire<select id="f_ess"><option value="-1">Indifférent</option><option value="1">Oui</option><option value="0">Non</option></select></label>
+    <label>Créée à partir du<input id="f_dfrom" type="date"></label>
+    <label>Créée jusqu'au<input id="f_dto" type="date"></label>
+  </div>
+  <div class="row" style="margin-top:8px">
+    <span class="sub">Création :</span>
+    <button type="button" data-y="1">&lt; 1 an</button>
+    <button type="button" data-y="2">&lt; 2 ans</button>
+    <button type="button" data-y="5">&lt; 5 ans</button>
+    <button type="button" id="reset">Réinitialiser les filtres</button>
+  </div>
+</section>
+
+<section>
+  <h2>3. Tableau de bord de la sélection</h2>
+  <div class="kpis" id="kpis"></div>
+  <div class="charts">
+    <div><h2>Secteurs cibles</h2><div id="c_cat"></div></div>
+    <div><h2>Effectif</h2><div id="c_tr"></div></div>
+    <div><h2>Ancienneté</h2><div id="c_age"></div></div>
+  </div>
+</section>
+
+<section>
+  <div class="row" style="justify-content:space-between;margin-bottom:8px">
+    <h2 style="margin:0" id="count">0 résultat</h2>
+    <button id="export" type="button" disabled>Exporter la sélection en CSV</button>
+  </div>
+  <div class="tw"><table>
+    <thead><tr id="thead"></tr></thead>
+    <tbody id="tbody"><tr><td colspan="13" class="sub">Aucune donnée chargée.</td></tr></tbody>
+  </table></div>
+  <div class="row pager">
+    <div class="row"><button id="prev" type="button">Précédent</button><span id="page" class="sub"></span><button id="next" type="button">Suivant</button></div>
+    <label class="row">Lignes par page <select id="psize"><option>50</option><option selected>100</option><option>250</option></select></label>
+  </div>
+  <p class="sub"><b>Présence web</b> : sites et réseaux issus d'OpenStreetMap (© contributeurs OpenStreetMap, licence ODbL), couverture très partielle. « Aucune présence web connue » signifie seulement qu'aucun lien n'a été trouvé dans cette source : cela ne prouve pas que l'entreprise n'a pas de site. Les rapprochements par nom seul sont marqués « à vérifier ». Vidéo, année de copyright et compatibilité mobile ne sont renseignées que pour les sites dont la page d'accueil a été analysée (échantillon pilote). Score opportunité = 0,4 x score secteur + déficit de communication (max 40) + budget plausible (max 12) + ancienneté (max 8) ; détail dans ANALYSE.md.</p>
+  <p class="sub">Les entrepreneurs individuels (étiquette EI) sont des personnes physiques : leurs nom et prénom sont des données personnelles (voir ANALYSE.md, note RGPD). Le lien « fiche » ouvre l'Annuaire des entreprises (data.gouv.fr) ; aucune requête n'est faite sans clic.</p>
+</section>
+</main>
+
+<script src="data/meta.js"></script>
+<script>
+/*CORE*/
+// Ligne après prep() : 0 siren, 1 nom, 2 enseigne, 3 date AAAAMMJJ, 4 tranche, 5 cat. entreprise, 6 naf,
+// 7 forme juridique, 8 drapeaux (1 EI, 2 ESS, 4 employeur), 9 score secteur, 10 CP, 11 commune, 12 département,
+// 13 web = null | [site, facebook, instagram, confiance 1-3, analyse?] ; 14 score opportunité
+// analyse = [statut 0 ok / 1 bloqué / 2 erreur, vidéo, réseaux (bits fb ig in tt yt x), année ©, mobile, https, vieillesse (bits), nb images]
+const pad = (n, l) => String(n).padStart(l, '0');
+const norm = s => s.normalize('NFD').replace(/\p{M}/gu, '').toUpperCase();
+const fmtDate = d => d ? pad(d, 8).replace(/(\d{4})(\d\d)(\d\d)/, '$1-$2-$3') : '';
+const AGES = [[1, '< 1 an'], [2, '1-2 ans'], [5, '2-5 ans'], [10, '5-10 ans'], [1e4, '> 10 ans']];
+
+const bits = n => { let c = 0; for (; n; n >>= 1) c += n & 1; return c; };
+const anaOk = w => w && w[4] && w[4][0] === 0 ? w[4] : null;
+
+// Score opportunité 0-100 = 0,4 x score secteur (max 40) + déficit de communication (max 40) + budget (max 12) + ancienneté (max 8)
+function opportunity(r, today) {
+  const w = r[13], a = w && w[4], y = Math.floor(today / 1e4), age = today - r[3];
+  let web;
+  if (!w) web = 25;                         // aucune présence web connue (OSM incomplet : indice, pas preuve)
+  else if (!w[0]) web = 20;                 // réseaux sociaux seulement, pas de site connu
+  else if (!a || a[0] === 1) web = 10;      // site connu mais non analysé ou bloqué
+  else if (a[0] === 2) web = 15;            // site en erreur (peut-être abandonné)
+  else {
+    const ns = bits(a[2]);
+    web = Math.min(40, (a[1] ? 0 : a[2] & 16 ? 6 : 12)        // pas de vidéo intégrée (6 si chaîne YouTube liée)
+      + (ns === 0 ? 8 : ns === 1 ? 4 : 0)                      // pas ou peu de réseaux sociaux
+      + (a[3] && a[3] <= y - 4 ? 8 : a[3] && a[3] <= y - 2 ? 4 : 0)  // copyright ancien
+      + (a[4] ? 0 : 6) + (a[5] ? 0 : 3)                        // pas adapté mobile, pas de HTTPS
+      + Math.min(6, 3 * bits(a[6])));                          // indices de vieillesse technique
+  }
+  const budget = (r[8] & 4 ? 6 : 0) + (r[4] >= 3 ? 3 : 0) + (r[4] >= 5 ? 3 : 0);   // employeur, >= 3 salariés, >= 10 salariés
+  const anc = !r[3] ? 0 : age < 20000 ? 8 : age >= 100000 ? 6 : age >= 50000 ? 3 : 0; // < 2 ans : identité à créer ; > 10 ans : image vieillissante
+  return Math.round(0.4 * r[9] + web + budget + anc);
+}
+
+function prep(dep, today) {
+  const D = window.DATA_DEP[dep], W = (window.DATA_WEB || {})[dep] || {};
+  if (D.ok) return;
+  for (const r of D.rows) { r[11] = D.communes[r[11]]; r[12] = dep; r[13] = W[r[0]] || null; r[14] = opportunity(r, today); }
+  D.ok = true;
+}
+
+// F : {q, cat, naf, scoreMin, cp:[préfixes], com, trMin, trMax, catent, type, emp, ess, dFrom, dTo} ; today : AAAAMMJJ
+function applyFilters(deps, F, M, today) {
+  const nafOk = new Uint8Array(M.naf.length), nq = norm(F.naf || ''), nqc = nq.replace(/[^0-9A-Z]/g, '');
+  M.naf.forEach((n, i) => {
+    nafOk[i] = (F.cat < 0 || n[2] === F.cat) &&
+      (!nq || (nqc && /^\d/.test(nqc) ? n[0].replace('.', '').startsWith(nqc) : norm(n[1]).includes(nq))) ? 1 : 0;
+  });
+  const q = norm(F.q || ''), com = norm(F.com || ''), cps = F.cp || [];
+  const S = {n: 0, ei: 0, emp: 0, ess: 0, sum: 0, cat: M.cats.map(() => 0), tr: M.tranches.map(() => 0), age: AGES.map(() => 0)};
+  const lim = AGES.map(a => today - a[0] * 10000), rows = [];
+  for (const d of deps) for (const r of window.DATA_DEP[d].rows) {
+    if (!nafOk[r[6]] || r[9] < F.scoreMin || r[14] < F.oppMin || r[4] < F.trMin || r[4] > F.trMax) continue;
+    if (F.catent >= 0 && r[5] !== F.catent) continue;
+    const fl = r[8];
+    if (F.type && (F.type === 'ei') !== !!(fl & 1)) continue;
+    if (F.ess >= 0 && F.ess !== (fl >> 1 & 1)) continue;
+    if (F.emp >= 0 && F.emp !== (fl >> 2 & 1)) continue;
+    if (F.dFrom && r[3] < F.dFrom || F.dTo && (r[3] > F.dTo || !r[3])) continue;
+    if (F.web || F.video) {
+      const w = r[13], a = anaOk(w);
+      if (F.web === 'none' ? w : F.web === 'site' ? !(w && w[0]) : F.web === 'ana' ? !a
+        : F.web === 'low' && !(!w || !w[0] || a && !a[1] && bits(a[2]) <= 1)) continue;
+      if (F.video === 'inc' ? a : F.video && (!a || (F.video === 'oui') !== !!a[1])) continue;
+    }
+    if (cps.length) { const cp = pad(r[10], 5); if (!cps.some(p => cp.startsWith(p))) continue; }
+    if (com && !norm(r[11]).includes(com)) continue;
+    if (q && !norm(r[1] + ' ' + r[2]).includes(q)) continue;
+    rows.push(r);
+    S.n++; S.ei += fl & 1; S.ess += fl >> 1 & 1; S.emp += fl >> 2 & 1; S.sum += r[9];
+    S.cat[M.naf[r[6]][2]]++; S.tr[r[4]]++;
+    S.age[lim.findIndex(l => r[3] >= l)]++;
+  }
+  return {rows, S};
+}
+
+function sortRows(rows, col, dir, M) {
+  const key = col === 'cat' ? r => M.cats[M.naf[r[6]][2]] : col === 6 ? r => M.naf[r[6]][0] : r => r[col];
+  rows.sort((a, b) => { const x = key(a), y = key(b); return x < y ? -dir : x > y ? dir : 0; });
+}
+
+function toCSV(rows, M, regOf) {
+  // préfixe ' : neutralise les formules (=, +, -, @) à l'ouverture dans un tableur
+  const c = v => { v = String(v); if (/^[=+\-@\t\r]/.test(v)) v = "'" + v; return /[";\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+  const out = ['SIREN;Nom;Enseigne;Type;Date de création;Effectif;Catégorie entreprise;NAF;Libellé NAF;Secteur cible;Forme juridique;ESS;Employeur;Score secteur;Code postal;Commune;Département;Région;Fiche;Score opportunité;Site web;Facebook;Instagram;Rapprochement OSM;Analyse du site;Vidéo;Année copyright;Adapté mobile;HTTPS;Nb réseaux sur le site'];
+  for (const r of rows) {
+    const n = M.naf[r[6]], s = pad(r[0], 9), w = r[13] || ['', '', '', 0], a = anaOk(w), on = v => v ? 'oui' : 'non';
+    out.push([s, r[1], r[2], r[8] & 1 ? 'EI' : 'Société', fmtDate(r[3]), M.tranches[r[4]], M.catent[r[5]], n[0], n[1],
+      M.cats[n[2]], M.cj[r[7]], r[8] & 2 ? 'oui' : 'non', r[8] & 4 ? 'oui' : 'non', r[9], r[10] ? pad(r[10], 5) : '',
+      r[11], r[12], regOf[r[12]], 'https://annuaire-entreprises.data.gouv.fr/entreprise/' + s,
+      r[14], w[0], w[1], w[2], ['', 'nom seul (à vérifier)', 'nom + lieu', 'SIRET'][w[3]], !w[4] ? '' : ['ok', 'bloqué', 'erreur'][w[4][0]],
+      a ? on(a[1]) : '', a && a[3] || '', a ? on(a[4]) : '', a ? on(a[5]) : '', a ? bits(a[2]) : ''].map(c).join(';'));
+  }
+  return String.fromCharCode(0xFEFF) + out.join('\r\n');  // BOM UTF-8 : accents corrects dans Excel
+}
+/*END CORE*/
+
+const $ = id => document.getElementById(id), M = window.META;
+const esc = s => String(s).replace(/[&<>"']/g, c => '&#' + c.charCodeAt(0) + ';');
+const nf = n => n.toLocaleString('fr-FR');
+const today = (() => { const d = new Date(); return d.getFullYear() * 1e4 + (d.getMonth() + 1) * 100 + d.getDate(); })();
+let active = [], view = [], page = 0, sortCol = 14, sortDir = -1;
+
+if (!M) {
+  $('status').className = 'err';
+  $('status').textContent = "data/meta.js introuvable : lancez scripts/02_jointure_export.py et gardez le dossier data/ à côté de ce fichier.";
+} else init();
+
+function init() {
+  const regOf = {}; M.deps.forEach(d => regOf[d[0]] = d[2]);
+  const total = M.deps.reduce((a, d) => a + d[3], 0);
+  $('src').textContent += ` Stock du ${M.date} - ${nf(total)} entreprises retenues.`;
+  [...new Set(M.deps.map(d => d[2]))].forEach(r => $('region').add(new Option(r, r)));
+  M.cats.forEach((c, i) => $('f_cat').add(new Option(c, i)));
+  M.catent.forEach((c, i) => $('f_catent').add(new Option(c, i)));
+  M.tranches.forEach((t, i) => { $('f_trmin').add(new Option(t, i)); $('f_trmax').add(new Option(t, i)); });
+  $('f_trmax').value = M.tranches.length - 1;
+  $('deps').innerHTML = M.deps.map(d => `<label data-r="${esc(d[2])}"><input type="checkbox" value="${d[0]}">${d[0]} ${esc(d[1])} <small>${nf(d[3])}</small></label>`).join('');
+  const COLS = [[14, 'Opportunité'], [9, 'Secteur'], [1, 'Nom'], ['cat', 'Secteur cible'], [6, 'NAF'], [3, 'Création'], [4, 'Effectif'], [5, 'Cat.'], [7, 'Forme'], [10, 'CP'], [11, 'Commune'], [null, 'Présence web'], [null, 'Fiche']];
+  $('thead').innerHTML = COLS.map(c => `<th scope="col"${c[0] === null ? '' : ` tabindex="0" data-c="${c[0]}"`}>${c[1]}</th>`).join('');
+
+  const boxes = () => [...$('deps').querySelectorAll('input')];
+  $('region').onchange = () => { const r = $('region').value; $('deps').querySelectorAll('label').forEach(l => l.hidden = !!r && l.dataset.r !== r); };
+  $('checkAll').onclick = () => boxes().forEach(b => { if (!b.parentNode.hidden) b.checked = true; });
+  $('uncheck').onclick = () => boxes().forEach(b => b.checked = false);
+
+  const loadDep = d => new Promise((ok, ko) => {
+    if (window.DATA_DEP && window.DATA_DEP[d]) return ok();
+    const s = document.createElement('script');   // <script> et non fetch : fonctionne en file://
+    s.src = 'data/dep_' + d + '.js';
+    s.onload = ok; s.onerror = () => ko(new Error('Fichier data/dep_' + d + '.js introuvable'));
+    document.head.append(s);
+  });
+  const loadWeb = d => new Promise(ok => {      // enrichissement facultatif : absent = aucune info web
+    if (window.DATA_WEB && window.DATA_WEB[d]) return ok();
+    const s = document.createElement('script');
+    s.src = 'data/web_' + d + '.js'; s.onload = ok; s.onerror = ok;
+    document.head.append(s);
+  });
+  const link = (u, t) => /^https?:\/\//i.test(u) ? `<a href="${esc(u)}" target="_blank" rel="noopener noreferrer nofollow">${esc(t)}</a> ` : '';
+  const webCell = w => {
+    if (!w) return '<small>inconnue</small>';
+    const a = w[4], ok = a && a[0] === 0, tag = t => `<span class="tag">${t}</span>`;
+    return link(w[0], w[0].replace(/^https?:\/\/(www\.)?/i, '').replace(/\/.*$/, '')) + link(w[1], 'Facebook') + link(w[2], 'Instagram') +
+      (w[3] === 1 ? tag('à vérifier') : '') + (a && a[0] === 1 ? tag('bloqué') : '') + (a && a[0] === 2 ? tag('site en erreur') : '') +
+      (ok ? `<small>${a[1] ? 'vidéo' : 'pas de vidéo'} · ${bits(a[2])} réseau(x)${a[3] ? ' · © ' + a[3] : ''}${a[4] ? '' : ' · non mobile'}${a[5] ? '' : ' · sans HTTPS'}${a[6] & 15 ? ' · technique ancienne' : ''}</small>` : '');
+  };
+  $('load').onclick = async () => {
+    const want = boxes().filter(b => b.checked).map(b => b.value), st = $('status');
+    const n = M.deps.filter(d => want.includes(d[0])).reduce((a, d) => a + d[3], 0);
+    if (n > 2e6 && !confirm(nf(n) + ' lignes à charger : cela peut demander plusieurs Go de mémoire. Continuer ?')) return;
+    $('load').disabled = true; st.className = '';
+    try {
+      for (const [i, d] of want.entries()) {
+        st.textContent = `Chargement du département ${d} (${i + 1}/${want.length})...`;
+        await loadDep(d); await loadWeb(d); prep(d, today);
+      }
+      active = want;
+      st.textContent = want.length ? `${want.length} département(s) chargé(s) : ${want.join(', ')} - ${nf(n)} entreprises.` : 'Aucun département coché.';
+    } catch (e) { st.className = 'err'; st.textContent = e.message; }
+    $('load').disabled = false;
+    refresh();
+  };
+
+  const dnum = v => v ? +v.replace(/-/g, '') : 0;
+  const readF = () => ({
+    q: $('f_q').value, cat: +$('f_cat').value, naf: $('f_naf').value, scoreMin: +$('f_score').value, oppMin: +$('f_opp').value, web: $('f_web').value, video: $('f_video').value,
+    cp: $('f_cp').value.split(/[\s,;]+/).filter(Boolean), com: $('f_com').value,
+    trMin: +$('f_trmin').value, trMax: +$('f_trmax').value, catent: +$('f_catent').value, type: $('f_type').value,
+    emp: +$('f_emp').value, ess: +$('f_ess').value, dFrom: dnum($('f_dfrom').value), dTo: dnum($('f_dto').value)});
+
+  const bars = (el, labels, vals) => {
+    const mx = Math.max(1, ...vals), tot = Math.max(1, vals.reduce((a, b) => a + b, 0));
+    $(el).innerHTML = labels.map((l, i) => [l, vals[i]]).filter(x => x[1]).sort((a, b) => el === 'c_cat' ? b[1] - a[1] : 0)
+      .map(([l, v]) => `<div class="bar"><span title="${esc(l)}">${esc(l)}</span><div><i style="width:${v / mx * 100}%"></i></div><span>${nf(v)} <small>(${Math.round(v / tot * 100)}%)</small></span></div>`).join('') || '<span class="sub">-</span>';
+  };
+
+  function refresh() {
+    $('f_score_o').textContent = $('f_score').value; $('f_opp_o').textContent = $('f_opp').value;
+    const {rows, S} = applyFilters(active, readF(), M, today);
+    view = rows; page = 0;
+    sortRows(view, sortCol, sortDir, M);
+    const pct = x => S.n ? Math.round(x / S.n * 100) + ' %' : '-';
+    $('kpis').innerHTML = [[nf(S.n), 'entreprises'], [pct(S.n - S.ei), 'sociétés (hors EI)'], [pct(S.emp), 'employeuses'],
+      [pct(S.age[0] + S.age[1]), 'créées depuis < 2 ans'], [pct(S.ess), 'ESS'], [S.n ? (S.sum / S.n).toFixed(0) : '-', 'score moyen']]
+      .map(k => `<div class="kpi"><b>${k[0]}</b><span>${k[1]}</span></div>`).join('');
+    bars('c_cat', M.cats, S.cat); bars('c_tr', M.tranches, S.tr); bars('c_age', AGES.map(a => a[1]), S.age);
+    $('count').textContent = nf(S.n) + (S.n > 1 ? ' résultats' : ' résultat');
+    $('export').disabled = !S.n;
+    render();
+  }
+
+  function render() {
+    const ps = +$('psize').value, np = Math.max(1, Math.ceil(view.length / ps));
+    page = Math.min(Math.max(page, 0), np - 1);
+    $('tbody').innerHTML = view.slice(page * ps, (page + 1) * ps).map(r => {
+      const n = M.naf[r[6]], s = pad(r[0], 9), f = r[8];
+      const sc = v => `<td><span class="sc ${v >= 70 ? 'h' : v >= 50 ? 'm' : ''}">${v}</span></td>`;
+      return '<tr>' + sc(r[14]) + sc(r[9]) +
+        `<td>${esc(r[1])}${f & 1 ? '<span class="tag">EI</span>' : ''}${f & 2 ? '<span class="tag">ESS</span>' : ''}${f & 4 ? '<span class="tag">employeur</span>' : ''}${r[2] ? `<small>${esc(r[2])}</small>` : ''}</td>` +
+        `<td>${esc(M.cats[n[2]])}</td><td>${n[0]}<small>${esc(n[1])}</small></td><td class="n">${fmtDate(r[3])}</td>` +
+        `<td>${esc(M.tranches[r[4]])}</td><td>${r[5] ? M.catent[r[5]] : ''}</td><td>${esc(M.cj[r[7]])}</td>` +
+        `<td class="n">${r[10] ? pad(r[10], 5) : ''}</td><td>${esc(r[11])}</td><td>${webCell(r[13])}</td>` +
+        `<td><a href="https://annuaire-entreprises.data.gouv.fr/entreprise/${s}" target="_blank" rel="noopener noreferrer" title="SIREN ${s}">fiche</a></td></tr>`;
+    }).join('') || `<tr><td colspan="13" class="sub">${active.length ? 'Aucun résultat avec ces filtres.' : 'Aucune donnée chargée.'}</td></tr>`;
+    $('page').textContent = `Page ${page + 1} / ${nf(np)}`;
+    $('prev').disabled = page === 0; $('next').disabled = page >= np - 1;
+    $('thead').querySelectorAll('th').forEach(th => {
+      if (th.dataset.c === String(sortCol)) th.setAttribute('aria-sort', sortDir > 0 ? 'ascending' : 'descending'); else th.removeAttribute('aria-sort');
+      th.textContent = th.textContent.replace(/ [▲▼]$/, '') + (th.dataset.c === String(sortCol) ? (sortDir > 0 ? ' ▲' : ' ▼') : '');
+    });
+  }
+
+  let t;
+  $('filters').addEventListener('input', () => { clearTimeout(t); t = setTimeout(refresh, 250); });
+  document.querySelectorAll('button[data-y]').forEach(b => b.onclick = () => {
+    $('f_dfrom').value = fmtDate(today - b.dataset.y * 10000); $('f_dto').value = ''; refresh();
+  });
+  $('reset').onclick = () => {
+    $('filters').querySelectorAll('input,select').forEach(e => e.value = e.tagName === 'SELECT' ? e.options[0].value : e.type === 'range' ? 0 : '');
+    $('f_trmax').value = M.tranches.length - 1; refresh();
+  };
+  const sortBy = th => {
+    const c = th.dataset.c; if (c === undefined) return;
+    const col = c === 'cat' ? c : +c;
+    if (col === sortCol) sortDir = -sortDir; else { sortCol = col; sortDir = col === 9 || col === 14 ? -1 : 1; }
+    sortRows(view, sortCol, sortDir, M); page = 0; render();
+  };
+  $('thead').onclick = e => e.target.closest('th') && sortBy(e.target.closest('th'));
+  $('thead').onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); sortBy(e.target); } };
+  $('prev').onclick = () => { page--; render(); };
+  $('next').onclick = () => { page++; render(); };
+  $('psize').onchange = () => { page = 0; render(); };
+  $('export').onclick = () => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([toCSV(view, M, regOf)], {type: 'text/csv;charset=utf-8'}));
+    a.download = 'prospects_' + (active.join('-').slice(0, 40) || 'selection') + '.csv';
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  };
+  refresh();
+}
+</script>
+</body>
+</html>

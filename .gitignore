@@ -1,0 +1,6 @@
+# Données brutes SIRENE (3,9 Go) et données générées (contiennent des noms d'entrepreneurs individuels)
+*.zip
+*.zip.part
+data/
+out/
+__pycache__/
